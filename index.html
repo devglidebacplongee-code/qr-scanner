@@ -396,10 +396,18 @@
         
         async function stopScanner() {
             try {
-                if (scanner) {
-                    await scanner.clear();
-                    scanner = null;
-                }
+                    if (scanner && isScanning) {
+                        // 1. On arrête d'abord le flux vidéo
+                        await scanner.stop();
+                        console.log('▶️ Flux vidéo arrêté');
+                        
+                        // 2. On nettoie l'interface (seulement après l'arrêt réussi)
+                        await scanner.clear();
+                        console.log('🧹 Interface nettoyée');
+                        
+                        // 3. On réinitialise l'instance pour pouvoir redémarrer proprement
+                        scanner = null; 
+                    }
                 
                 isScanning = false;
                 btnStart.disabled = false;
