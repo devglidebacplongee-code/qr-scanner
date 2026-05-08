@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner QR Code</title>
-    
-    <!-- Bibliothèque de scan QR -->
+    <title>Scanner QR</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-    
     <style>
         * {
             margin: 0;
@@ -16,299 +13,252 @@
         }
         
         body {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
             color: white;
+            overflow: hidden;
         }
         
         #scanner-container {
-            width: 100%;
-            max-width: 600px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 24px;
-            color: #fff;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 8px;
         }
         
         #reader {
-            width: 100%;
-            border-radius: 12px;
+            flex: 1;
+            border-radius: 8px;
             overflow: hidden;
-            background: #000;
         }
         
-        #result {
-            margin-top: 20px;
-            padding: 16px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            text-align: center;
-            display: none;
-            animation: slideIn 0.3s ease-out;
+        #reader__dashboard_section_csr button {
+            display: none !important;
         }
         
-        #result.success {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-            display: block;
+        #controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
         }
         
-        #result.processing {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-            display: block;
-        }
-        
-        #result.error {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-            display: block;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #9ca3af;
-        }
-        
-        .loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            border-top: 3px solid #3b82f6;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .instruction {
-            text-align: center;
-            color: #9ca3af;
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
             font-size: 14px;
-            margin-top: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
         }
         
-        /* Responsive */
-        @media (max-width: 600px) {
-            #scanner-container {
-                padding: 16px;
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-start {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-stop {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        
+        #result-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #10b981, #059669);
+            padding: 24px 32px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            display: none;
+            animation: popup 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        
+        #result-overlay.show {
+            display: block;
+        }
+        
+        @keyframes popup {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
             }
-            
-            h1 {
-                font-size: 20px;
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
             }
+        }
+        
+        #result-overlay .icon {
+            font-size: 48px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        
+        #result-overlay .code {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
     <div id="scanner-container">
-        <h1>📱 Scanner QR Code</h1>
-        
         <div id="reader"></div>
-        
-        <div id="result"></div>
-        
-        <p class="instruction">
-            Positionnez le QR code devant la caméra
-        </p>
+        <div id="controls">
+            <button id="btn-start" class="btn btn-start">▶️ Démarrer</button>
+            <button id="btn-stop" class="btn btn-stop" disabled>⏹️ Arrêter</button>
+        </div>
+    </div>
+    
+    <div id="result-overlay">
+        <div class="icon">✅</div>
+        <div class="code" id="result-code"></div>
     </div>
     
     <script>
-        let isProcessing = false;
         let scanner = null;
-        let lastScannedCode = '';
+        let isScanning = false;
+        let lastCode = '';
         
-        // Fonction pour afficher les résultats
-        function showResult(message, type) {
-            const resultEl = document.getElementById('result');
-            resultEl.textContent = message;
-            resultEl.className = type;
-            
-            // Auto-masquer après 3 secondes (sauf si processing)
-            if (type !== 'processing') {
-                setTimeout(() => {
-                    resultEl.style.display = 'none';
-                }, 3000);
-            }
-        }
+        const btnStart = document.getElementById('btn-start');
+        const btnStop = document.getElementById('btn-stop');
+        const resultOverlay = document.getElementById('result-overlay');
+        const resultCode = document.getElementById('result-code');
         
-        // Fonction appelée quand un QR code est détecté
-        function onScanSuccess(decodedText, decodedResult) {
-            // Éviter les scans multiples du même code
-            if (isProcessing || decodedText === lastScannedCode) {
-                return;
+        // ==========================================
+        // CALLBACK QUAND QR CODE EST SCANNÉ
+        // ==========================================
+        function onScanSuccess(decodedText) {
+            if (decodedText === lastCode) return;
+            
+            lastCode = decodedText;
+            console.log('QR scanné:', decodedText);
+            
+            // Afficher le code
+            resultCode.textContent = decodedText;
+            resultOverlay.classList.add('show');
+            
+            // Sauvegarder dans localStorage (IMPORTANT pour Flutter)
+            localStorage.setItem('scannedQR', decodedText);
+            localStorage.setItem('qrTimestamp', Date.now().toString());
+            
+            // Envoyer via postMessage (pour Flutter WebView)
+            if (window.parent) {
+                window.parent.postMessage(
+                    JSON.stringify({
+                        type: 'QR_SCANNED',
+                        code: decodedText,
+                        timestamp: Date.now()
+                    }),
+                    '*'
+                );
             }
             
-            isProcessing = true;
-            lastScannedCode = decodedText;
-            
-            // Afficher le code scanné
-            showResult('⏳ Code détecté : ' + decodedText, 'processing');
-            console.log('QR Code scanné:', decodedText);
-            
-            // Pause du scanner
-            if (scanner) {
+            // Pause temporaire
+            if (scanner && isScanning) {
                 scanner.pause(true);
-            }
-            
-            // COMMUNICATION AVEC FLUTTERFLOW
-            // Méthode 1 : Via JavaScript Channel (InAppWebView)
-            try {
-                if (window.flutter_inappwebview) {
-                    window.flutter_inappwebview.callHandler('qrScanned', decodedText);
-                }
-            } catch (e) {
-                console.log('Flutter InAppWebView non disponible');
-            }
-            
-            // Méthode 2 : Via postMessage (pour iframe)
-            try {
-                window.parent.postMessage({
-                    type: 'QR_SCANNED',
-                    code: decodedText,
-                    timestamp: new Date().toISOString()
-                }, '*');
-            } catch (e) {
-                console.log('PostMessage non disponible');
-            }
-            
-            // Méthode 3 : Via URL Custom Scheme
-            try {
-                window.location.href = 'flutterflow://qr-scanned?code=' + encodeURIComponent(decodedText);
-            } catch (e) {
-                console.log('Custom URL scheme non disponible');
-            }
-            
-            // Afficher succès
-            setTimeout(() => {
-                showResult('✅ Code envoyé : ' + decodedText, 'success');
-            }, 500);
-            
-            // Reprendre le scan après 2 secondes
-            setTimeout(() => {
-                isProcessing = false;
-                lastScannedCode = '';
                 
-                if (scanner) {
-                    scanner.resume();
-                }
-                
-                // Masquer le résultat
                 setTimeout(() => {
-                    document.getElementById('result').style.display = 'none';
-                }, 1000);
-                
-            }, 2000);
-        }
-        
-        // Fonction appelée en cas d'erreur de scan
-        function onScanFailure(error) {
-            // Ne rien faire - les erreurs sont normales pendant le scan continu
-            // console.warn('Scan error:', error);
-        }
-        
-        // Initialiser le scanner
-        function initScanner() {
-            // Vérifier que la bibliothèque est chargée
-            if (typeof Html5QrcodeScanner === 'undefined') {
-                console.log('Attente du chargement de la bibliothèque...');
-                setTimeout(initScanner, 200);
-                return;
-            }
-            
-            try {
-                // Configuration du scanner
-                const config = {
-                    fps: 10,                    // Images par seconde
-                    qrbox: 250,                 // Taille de la zone de scan
-                    aspectRatio: 1.0,           // Ratio carré
-                    rememberLastUsedCamera: true,
-                    showTorchButtonIfSupported: true,  // Bouton flash si dispo
-                    formatsToSupport: [         // Formats supportés
-                        Html5QrcodeSupportedFormats.QR_CODE
-                    ],
-                    videoConstraints: {
-                        facingMode: { ideal: "environment" }  // Caméra arrière préférée
+                    resultOverlay.classList.remove('show');
+                    lastCode = '';
+                    if (scanner && isScanning) {
+                        scanner.resume();
                     }
-                };
+                }, 1500);
+            }
+        }
+        
+        // ==========================================
+        // DÉMARRER LE SCAN
+        // ==========================================
+        async function startScan() {
+            try {
+                if (!scanner) {
+                    scanner = new Html5Qrcode("reader");
+                }
                 
-                // Créer l'instance du scanner
-                scanner = new Html5QrcodeScanner("reader", config, false);
+                const devices = await Html5Qrcode.getCameras();
+                if (!devices || devices.length === 0) {
+                    alert('Aucune caméra trouvée');
+                    return;
+                }
                 
-                // Lancer le rendu
-                scanner.render(onScanSuccess, onScanFailure);
+                const cameraId = devices.length > 1 ? devices[1].id : devices[0].id;
                 
-                showResult('✅ Scanner prêt', 'success');
+                await scanner.start(
+                    cameraId,
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    onScanSuccess,
+                    () => {}
+                );
                 
-                console.log('Scanner initialisé avec succès');
+                isScanning = true;
+                btnStart.disabled = true;
+                btnStop.disabled = false;
                 
             } catch (err) {
-                console.error('Erreur initialisation scanner:', err);
-                showResult('❌ Erreur : ' + err.message, 'error');
+                alert('Erreur: ' + err.message);
+                console.error(err);
             }
         }
         
-        // Demander la permission caméra au chargement
-        function requestCameraPermission() {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(function(stream) {
-                        console.log('Permission caméra accordée');
-                        // Arrêter le stream test
-                        stream.getTracks().forEach(track => track.stop());
-                        // Initialiser le scanner
-                        initScanner();
-                    })
-                    .catch(function(err) {
-                        console.error('Permission caméra refusée:', err);
-                        showResult('⚠️ Veuillez autoriser l\'accès à la caméra', 'error');
-                    });
-            } else {
-                showResult('❌ Caméra non supportée par ce navigateur', 'error');
+        // ==========================================
+        // ARRÊTER LE SCAN
+        // ==========================================
+        async function stopScan() {
+            if (scanner && isScanning) {
+                await scanner.stop();
+                isScanning = false;
+                btnStart.disabled = false;
+                btnStop.disabled = true;
+                lastCode = '';
             }
         }
         
-        // Démarrer au chargement de la page
-        window.addEventListener('load', function() {
-            console.log('Page chargée, demande de permission caméra...');
-            requestCameraPermission();
+        // ==========================================
+        // ÉVÉNEMENTS
+        // ==========================================
+        btnStart.addEventListener('click', startScan);
+        btnStop.addEventListener('click', stopScan);
+        
+        // Auto-démarrage si demandé
+        window.addEventListener('message', (event) => {
+            try {
+                const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                if (data.action === 'START_SCAN') {
+                    startScan();
+                } else if (data.action === 'STOP_SCAN') {
+                    stopScan();
+                }
+            } catch (e) {}
         });
         
-        // Gérer la réception de messages (pour tests)
-        window.addEventListener('message', function(event) {
-            console.log('Message reçu:', event.data);
-        });
-        
+        // API publique
+        window.getLastScannedCode = () => localStorage.getItem('scannedQR');
+        window.clearLastCode = () => {
+            localStorage.removeItem('scannedQR');
+            localStorage.removeItem('qrTimestamp');
+        };
     </script>
 </body>
 </html>
