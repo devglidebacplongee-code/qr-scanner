@@ -284,6 +284,11 @@
             isProcessing = true;
             lastScannedCode = decodedText;
             
+            window.parent.postMessage(JSON.stringify({
+                'type': 'QR_SCANNED',
+                'code': decodedText
+            }), '*');
+            
             console.log('✅ QR scanné:', decodedText);
             
             showResult('⏳ Code détecté : ' + decodedText, 'processing');
