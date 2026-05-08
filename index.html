@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner QR Code</title>
+    
+    <!-- Bibliothèque de scan QR -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: white;
+        }
+        
+        #scanner-container {
+            width: 100%;
+            max-width: 600px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #fff;
+        }
+        
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        #result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        #result.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            display: block;
+        }
+        
+        #result.processing {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+            display: block;
+        }
+        
+        #result.error {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            display: block;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #9ca3af;
+        }
+        
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid #3b82f6;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .instruction {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 14px;
+            margin-top: 16px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            #scanner-container {
+                padding: 16px;
+            }
+            
+            h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="scanner-container">
+        <h1>📱 Scanner QR Code</h1>
+        
+        <div id="reader"></div>
+        
+        <div id="result"></div>
+        
+        <p class="instruction">
+            Positionnez le QR code devant la caméra
+        </p>
+    </div>
+    
+    <script>
+        let isProcessing = false;
+        let scanner = null;
+        let lastScannedCode = '';
+        
+        // Fonction pour afficher les résultats
+        function showResult(message, type) {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = message;
+            resultEl.className = type;
+            
+            // Auto-masquer après 3 secondes (sauf si processing)
+            if (type !== 'processing') {
+                setTimeout(() => {
+                    resultEl.style.display = 'none';
+                }, 3000);
+            }
+        }
+        
+        // Fonction appelée quand un QR code est détecté
+        function onScanSuccess(decodedText, decodedResult) {
+            // Éviter les scans multiples du même code
+            if (isProcessing || decodedText === lastScannedCode) {
+                return;
+            }
+            
+            isProcessing = true;
+            lastScannedCode = decodedText;
+            
+            // Afficher le code scanné
+            showResult('⏳ Code détecté : ' + decodedText, 'processing');
+            console.log('QR Code scanné:', decodedText);
+            
+            // Pause du scanner
+            if (scanner) {
+                scanner.pause(true);
+            }
+            
+            // COMMUNICATION AVEC FLUTTERFLOW
+            // Méthode 1 : Via JavaScript Channel (InAppWebView)
+            try {
+                if (window.flutter_inappwebview) {
+                    window.flutter_inappwebview.callHandler('qrScanned', decodedText);
+                }
+            } catch (e) {
+                console.log('Flutter InAppWebView non disponible');
+            }
+            
+            // Méthode 2 : Via postMessage (pour iframe)
+            try {
+                window.parent.postMessage({
+                    type: 'QR_SCANNED',
+                    code: decodedText,
+                    timestamp: new Date().toISOString()
+                }, '*');
+            } catch (e) {
+                console.log('PostMessage non disponible');
+            }
+            
+            // Méthode 3 : Via URL Custom Scheme
+            try {
+                window.location.href = 'flutterflow://qr-scanned?code=' + encodeURIComponent(decodedText);
+            } catch (e) {
+                console.log('Custom URL scheme non disponible');
+            }
+            
+            // Afficher succès
+            setTimeout(() => {
+                showResult('✅ Code envoyé : ' + decodedText, 'success');
+            }, 500);
+            
+            // Reprendre le scan après 2 secondes
+            setTimeout(() => {
+                isProcessing = false;
+                lastScannedCode = '';
+                
+                if (scanner) {
+                    scanner.resume();
+                }
+                
+                // Masquer le résultat
+                setTimeout(() => {
+                    document.getElementById('result').style.display = 'none';
+                }, 1000);
+                
+            }, 2000);
+        }
+        
+        // Fonction appelée en cas d'erreur de scan
+        function onScanFailure(error) {
+            // Ne rien faire - les erreurs sont normales pendant le scan continu
+            // console.warn('Scan error:', error);
+        }
+        
+        // Initialiser le scanner
+        function initScanner() {
+            // Vérifier que la bibliothèque est chargée
+            if (typeof Html5QrcodeScanner === 'undefined') {
+                console.log('Attente du chargement de la bibliothèque...');
+                setTimeout(initScanner, 200);
+                return;
+            }
+            
+            try {
+                // Configuration du scanner
+                const config = {
+                    fps: 10,                    // Images par seconde
+                    qrbox: 250,                 // Taille de la zone de scan
+                    aspectRatio: 1.0,           // Ratio carré
+                    rememberLastUsedCamera: true,
+                    showTorchButtonIfSupported: true,  // Bouton flash si dispo
+                    formatsToSupport: [         // Formats supportés
+                        Html5QrcodeSupportedFormats.QR_CODE
+                    ],
+                    videoConstraints: {
+                        facingMode: { ideal: "environment" }  // Caméra arrière préférée
+                    }
+                };
+                
+                // Créer l'instance du scanner
+                scanner = new Html5QrcodeScanner("reader", config, false);
+                
+                // Lancer le rendu
+                scanner.render(onScanSuccess, onScanFailure);
+                
+                showResult('✅ Scanner prêt', 'success');
+                
+                console.log('Scanner initialisé avec succès');
+                
+            } catch (err) {
+                console.error('Erreur initialisation scanner:', err);
+                showResult('❌ Erreur : ' + err.message, 'error');
+            }
+        }
+        
+        // Demander la permission caméra au chargement
+        function requestCameraPermission() {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(function(stream) {
+                        console.log('Permission caméra accordée');
+                        // Arrêter le stream test
+                        stream.getTracks().forEach(track => track.stop());
+                        // Initialiser le scanner
+                        initScanner();
+                    })
+                    .catch(function(err) {
+                        console.error('Permission caméra refusée:', err);
+                        showResult('⚠️ Veuillez autoriser l\'accès à la caméra', 'error');
+                    });
+            } else {
+                showResult('❌ Caméra non supportée par ce navigateur', 'error');
+            }
+        }
+        
+        // Démarrer au chargement de la page
+        window.addEventListener('load', function() {
+            console.log('Page chargée, demande de permission caméra...');
+            requestCameraPermission();
+        });
+        
+        // Gérer la réception de messages (pour tests)
+        window.addEventListener('message', function(event) {
+            console.log('Message reçu:', event.data);
+        });
+        
+    </script>
+</body>
+</html>
