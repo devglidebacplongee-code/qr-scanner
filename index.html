@@ -343,19 +343,20 @@
                 showResult('🔄 Démarrage...', 'processing');
                 
                 if (!scanner) {
-                    scanner = new Html5QrcodeScanner(
-                        "reader",
-                        { 
-                            fps: 10,
-                            qrbox: { width: 250, height: 250 },
-                            rememberLastUsedCamera: false,
-                            showTorchButtonIfSupported: true
-                        },
-                        false
+                    scanner = new Html5Qrcode(
+                        "reader"
                     );
                 }
                 
-                scanner.render(onScanSuccess, onScanFailure);
+                await scanner.start(
+                    selectedCameraId, 
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    onScanSuccess,
+                    onScanFailure
+                );
                 
                 isScanning = true;
                 btnStart.disabled = true;
@@ -363,7 +364,7 @@
                 cameraSelect.disabled = true;
                 
                 showResult('✅ Scanner actif', 'success');
-                console.log('✅ Scanner démarré');
+                console.log('✅ Scanner démarré sur ID:', selectedCameraId);
                 
             } catch (err) {
                 console.error('❌ Erreur démarrage:', err);
