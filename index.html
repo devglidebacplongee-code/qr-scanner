@@ -40,7 +40,6 @@
             color: #fff;
         }
         
-        /* Sélection de caméra */
         #camera-selection {
             margin-bottom: 16px;
         }
@@ -116,35 +115,6 @@
             }
         }
         
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #9ca3af;
-        }
-        
-        .loading-spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            border-top: 3px solid #3b82f6;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .instruction {
-            text-align: center;
-            color: #9ca3af;
-            font-size: 14px;
-            margin-top: 16px;
-        }
-        
-        /* Boutons */
         #controls {
             display: flex;
             gap: 12px;
@@ -168,12 +138,8 @@
             color: white;
         }
         
-        .btn-start:hover {
+        .btn-start:hover:not(:disabled) {
             background: #059669;
-        }
-        
-        .btn-start:active {
-            transform: scale(0.98);
         }
         
         .btn-stop {
@@ -181,11 +147,11 @@
             color: white;
         }
         
-        .btn-stop:hover {
+        .btn-stop:hover:not(:disabled) {
             background: #dc2626;
         }
         
-        .btn-stop:active {
+        .btn:active:not(:disabled) {
             transform: scale(0.98);
         }
         
@@ -194,20 +160,15 @@
             cursor: not-allowed;
         }
         
-        /* Masquer les boutons originaux */
         #reader__dashboard_section_csr button {
             display: none !important;
         }
         
-        /* Responsive */
-        @media (max-width: 600px) {
-            #scanner-container {
-                padding: 16px;
-            }
-            
-            h1 {
-                font-size: 20px;
-            }
+        .instruction {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 14px;
+            margin-top: 16px;
         }
     </style>
 </head>
@@ -215,9 +176,8 @@
     <div id="scanner-container">
         <h1>📱 Scanner QR Code</h1>
         
-        <!-- Sélection de caméra -->
         <div id="camera-selection">
-            <label for="camera-select">Sélectionner une caméra :</label>
+            <label for="camera-select">📷 Sélectionner une caméra :</label>
             <select id="camera-select">
                 <option value="">Chargement des caméras...</option>
             </select>
@@ -248,66 +208,6 @@
         const btnStop = document.getElementById('btn-stop');
         const cameraSelect = document.getElementById('camera-select');
         
-        // ==========================================
-        // CHARGER LES CAMÉRAS DISPONIBLES
-        // ==========================================
-        async function loadCameras() {
-            try {
-                const cameras = await Html5Qrcode.getCameras();
-                availableCameras = cameras;
-                
-                console.log('📷 Caméras trouvées:', cameras.length);
-                cameras.forEach((camera, index) => {
-                    console.log(`  ${index}: ${camera.label || camera.id}`);
-                });
-                
-                // Remplir le select
-                cameraSelect.innerHTML = '';
-                
-                if (cameras.length === 0) {
-                    cameraSelect.innerHTML = '<option value="">Aucune caméra trouvée</option>';
-                    showResult('❌ Aucune caméra disponible', 'error');
-                    return;
-                }
-                
-                cameras.forEach((camera, index) => {
-                    const option = document.createElement('option');
-                    option.value = camera.id;
-                    
-                    // Nom convivial de la caméra
-                    let cameraName = camera.label || `Caméra ${index + 1}`;
-                    
-                    // Filtrer OBS Virtual Camera par défaut
-                    if (cameraName.toLowerCase().includes('obs') || 
-                        cameraName.toLowerCase().includes('virtual')) {
-                        cameraName += ' (virtuelle - non recommandée)';
-                    }
-                    
-                    option.textContent = cameraName;
-                    
-                    // Sélectionner par défaut la première caméra physique
-                    if (index === 0 || 
-                        (!option.textContent.includes('virtuelle') && !cameraSelect.value)) {
-                        option.selected = true;
-                    }
-                    
-                    cameraSelect.appendChild(option);
-                });
-                
-                // Activer le bouton démarrer
-                btnStart.disabled = false;
-                showResult('✅ Caméra prête', 'success');
-                
-            } catch (err) {
-                console.error('❌ Erreur chargement caméras:', err);
-                cameraSelect.innerHTML = '<option value="">Erreur de chargement</option>';
-                showResult('❌ Erreur: ' + err.message, 'error');
-            }
-        }
-        
-        // ==========================================
-        // AFFICHER RÉSULTAT
-        // ==========================================
         function showResult(message, type) {
             const resultEl = document.getElementById('result');
             resultEl.textContent = message;
@@ -320,9 +220,62 @@
             }
         }
         
-        // ==========================================
-        // CALLBACK SCAN RÉUSSI
-        // ==========================================
+        async function loadCameras() {
+            try {
+                const cameras = await Html5Qrcode.getCameras();
+                availableCameras = cameras;
+                
+                console.log('📷 Caméras trouvées:', cameras.length);
+                cameras.forEach((camera, index) => {
+                    console.log(`  Caméra ${index}:`, camera.label || camera.id);
+                });
+                
+                cameraSelect.innerHTML = '';
+                
+                if (cameras.length === 0) {
+                    cameraSelect.innerHTML = '<option value="">Aucune caméra trouvée</option>';
+                    showResult('❌ Aucune caméra disponible', 'error');
+                    return;
+                }
+                
+                cameras.forEach((camera, index) => {
+                    const option = document.createElement('option');
+                    option.value = camera.id;
+                    
+                    let cameraName = camera.label || `Caméra ${index + 1}`;
+                    
+                    const lowerName = cameraName.toLowerCase();
+                    if (lowerName.includes('obs') || 
+                        lowerName.includes('virtual') || 
+                        lowerName.includes('droidcam')) {
+                        cameraName += ' ⚠️ (virtuelle)';
+                        option.style.color = '#fbbf24';
+                    }
+                    
+                    option.textContent = cameraName;
+                    cameraSelect.appendChild(option);
+                });
+                
+                // Sélectionner la première caméra non-virtuelle
+                for (let i = 0; i < cameraSelect.options.length; i++) {
+                    if (!cameraSelect.options[i].textContent.includes('virtuelle')) {
+                        cameraSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+                
+                btnStart.disabled = false;
+                showResult('✅ ' + cameras.length + ' caméra(s) détectée(s)', 'success');
+                
+            } catch (err) {
+                console.error('❌ Erreur chargement caméras:', err);
+                cameraSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+                
+                const errorMsg = err && err.message ? err.message : 'Erreur inconnue';
+                showResult('❌ ' + errorMsg, 'error');
+            }
+        }
+        
         function onScanSuccess(decodedText, decodedResult) {
             if (isProcessing || decodedText === lastScannedCode) {
                 return;
@@ -335,7 +288,6 @@
             
             showResult('⏳ Code détecté : ' + decodedText, 'processing');
             
-            // Sauvegarder dans localStorage
             try {
                 localStorage.setItem('scannedQR', decodedText);
                 localStorage.setItem('qrTimestamp', Date.now().toString());
@@ -344,7 +296,6 @@
                 console.warn('⚠️ localStorage non disponible');
             }
             
-            // Pause du scanner
             if (scanner) {
                 try {
                     scanner.pause(true);
@@ -353,12 +304,10 @@
                 }
             }
             
-            // Afficher succès
             setTimeout(() => {
-                showResult('✅ Code envoyé : ' + decodedText, 'success');
+                showResult('✅ Code : ' + decodedText, 'success');
             }, 500);
             
-            // Reprendre après 2 secondes
             setTimeout(() => {
                 isProcessing = false;
                 lastScannedCode = '';
@@ -378,28 +327,21 @@
             }, 2000);
         }
         
-        // ==========================================
-        // CALLBACK SCAN ÉCHOUÉ
-        // ==========================================
         function onScanFailure(error) {
-            // Ne rien afficher - erreurs normales
+            // Rien - erreurs normales
         }
         
-        // ==========================================
-        // DÉMARRER LE SCANNER
-        // ==========================================
         async function startScanner() {
             const selectedCameraId = cameraSelect.value;
             
             if (!selectedCameraId) {
-                showResult('❌ Veuillez sélectionner une caméra', 'error');
+                showResult('❌ Sélectionnez une caméra', 'error');
                 return;
             }
             
             try {
-                showResult('🔄 Démarrage du scanner...', 'processing');
+                showResult('🔄 Démarrage...', 'processing');
                 
-                // Créer l'instance si nécessaire
                 if (!scanner) {
                     scanner = new Html5QrcodeScanner(
                         "reader",
@@ -413,7 +355,6 @@
                     );
                 }
                 
-                // Démarrer avec la caméra sélectionnée
                 scanner.render(onScanSuccess, onScanFailure);
                 
                 isScanning = true;
@@ -429,29 +370,29 @@
                 
                 let errorMsg = 'Erreur: ';
                 
-                if (err.name === 'NotAllowedError') {
+                // Vérifier err.name de manière sûre
+                const errorName = err && err.name ? err.name : '';
+                const errorMessage = err && err.message ? err.message : '';
+                
+                if (errorName === 'NotAllowedError') {
                     errorMsg += 'Permission caméra refusée';
-                } else if (err.name === 'NotReadableError') {
-                    errorMsg += 'Caméra occupée ou inaccessible. Essayez une autre caméra.';
-                } else if (err.name === 'NotFoundError') {
+                } else if (errorName === 'NotReadableError') {
+                    errorMsg += 'Caméra occupée ou inaccessible. Fermez les autres apps (Teams, Zoom, OBS...) et réessayez avec une autre caméra.';
+                } else if (errorName === 'NotFoundError') {
                     errorMsg += 'Caméra introuvable';
-                } else if (err.message) {
-                    errorMsg += err.message;
+                } else if (errorMessage) {
+                    errorMsg += errorMessage;
                 } else {
-                    errorMsg += 'Erreur inconnue';
+                    errorMsg += 'Impossible de démarrer la caméra';
                 }
                 
                 showResult('❌ ' + errorMsg, 'error');
                 
-                // Réactiver les contrôles
                 btnStart.disabled = false;
                 cameraSelect.disabled = false;
             }
         }
         
-        // ==========================================
-        // ARRÊTER LE SCANNER
-        // ==========================================
         async function stopScanner() {
             try {
                 if (scanner) {
@@ -473,23 +414,16 @@
             }
         }
         
-        // ==========================================
-        // ÉVÉNEMENTS
-        // ==========================================
         btnStart.addEventListener('click', startScanner);
         btnStop.addEventListener('click', stopScanner);
         
-        // Changement de caméra pendant le scan
         cameraSelect.addEventListener('change', async () => {
             if (isScanning) {
                 await stopScanner();
-                showResult('ℹ️ Changement de caméra. Redémarrez le scan.', 'success');
+                showResult('ℹ️ Redémarrez le scan avec la nouvelle caméra', 'success');
             }
         });
         
-        // ==========================================
-        // API PUBLIQUE
-        // ==========================================
         window.getLastScannedCode = function() {
             try {
                 return localStorage.getItem('scannedQR');
@@ -511,21 +445,15 @@
             return availableCameras;
         };
         
-        // ==========================================
-        // INITIALISATION
-        // ==========================================
         window.addEventListener('load', () => {
             console.log('📄 Page chargée');
             
-            // Vérifier que la lib est chargée
             if (typeof Html5QrcodeScanner === 'undefined') {
                 showResult('❌ Bibliothèque non chargée', 'error');
                 return;
             }
             
             console.log('✅ Bibliothèque Html5Qrcode chargée');
-            
-            // Charger les caméras
             loadCameras();
         });
         
