@@ -453,6 +453,11 @@
                 btnStart.disabled = false;
                 btnStop.disabled = true;
                 cameraSelect.disabled = false;
+
+                // ✅ ENVOYER MESSAGE À FLUTTERFLOW
+                window.parent.postMessage(JSON.stringify({
+                    'type': 'SCAN_STOPPED'
+                }), '*');
                 
                 showResult('⏹️ Scanner arrêté', 'success');
                 console.log('⏹️ Scanner arrêté');
