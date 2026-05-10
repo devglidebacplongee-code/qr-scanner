@@ -256,13 +256,48 @@
                     cameraSelect.appendChild(option);
                 });
                 
-                // Sélectionner la première caméra non-virtuelle
+            // Détection mobile
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            
+            if (isMobile) {
+            
+                // Chercher caméra arrière
+                const backCameraIndex = cameras.findIndex(camera => {
+                    const label = (camera.label || '').toLowerCase();
+            
+                    return (
+                        label.includes('back') ||
+                        label.includes('rear') ||
+                        label.includes('environment') ||
+                        label.includes('trás') ||
+                        label.includes('arrière')
+                    );
+                });
+            
+                // Si trouvée → sélectionner caméra arrière
+                if (backCameraIndex >= 0) {
+                    cameraSelect.selectedIndex = backCameraIndex;
+                } else {
+            
+                    // Sinon première non virtuelle
+                    for (let i = 0; i < cameraSelect.options.length; i++) {
+                        if (!cameraSelect.options[i].textContent.includes('virtuelle')) {
+                            cameraSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            
+            } else {
+            
+                // Desktop → première non virtuelle
                 for (let i = 0; i < cameraSelect.options.length; i++) {
                     if (!cameraSelect.options[i].textContent.includes('virtuelle')) {
                         cameraSelect.selectedIndex = i;
                         break;
                     }
                 }
+            }
                 
                 btnStart.disabled = false;
                 showResult('✅ ' + cameras.length + ' caméra(s) détectée(s)', 'success');
