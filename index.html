@@ -312,8 +312,6 @@
         }
         
         const SCAN_PAUSE_MS = 5000; // 5 secondes de sécurité entre deux scans
-        let isProcessing = false;   
-        let lastScannedCode = '';   
         
         function onScanSuccess(decodedText, decodedResult) {
             // 1. BLOCAGE : Si déjà en cours de traitement ou si c'est le même code trop vite
