@@ -311,60 +311,76 @@
             }
         }
         
+        const SCAN_PAUSE_MS = 5000; // 5 secondes de sécurité entre deux scans
+        let isProcessing = false;   
+        let lastScannedCode = '';   
+        
         function onScanSuccess(decodedText, decodedResult) {
-            if (isProcessing || decodedText === lastScannedCode) {
+            // 1. BLOCAGE : Si déjà en cours de traitement ou si c'est le même code trop vite
+            if (isProcessing || (decodedText === lastScannedCode)) {
                 return;
             }
-            
+        
+            // 2. ACTIVATION DU VERROU
             isProcessing = true;
             lastScannedCode = decodedText;
-            
+        
+            // 3. SIGNAL À FLUTTERFLOW
             window.parent.postMessage(JSON.stringify({
                 'type': 'QR_SCANNED',
                 'code': decodedText
             }), '*');
-            
+        
             console.log('✅ QR scanné:', decodedText);
+        
+            // 4. FEEDBACK VISUEL IMMÉDIAT
+            showResult('✅ Scan réussi', 'success');
             
-            showResult('⏳ Code détecté : ' + decodedText, 'processing');
-            
-            try {
-                localStorage.setItem('scannedQR', decodedText);
-                localStorage.setItem('qrTimestamp', Date.now().toString());
-                console.log('💾 Sauvegardé dans localStorage');
-            } catch (e) {
-                console.warn('⚠️ localStorage non disponible');
-            }
-            
+            // Pause du flux vidéo pour économiser la batterie et marquer l'arrêt
             if (scanner) {
-                try {
-                    scanner.pause(true);
-                } catch (e) {
-                    console.warn('⚠️ Impossible de mettre en pause');
-                }
+                try { scanner.pause(true); } catch (e) { console.warn(e); }
             }
+        
+            // 5. GESTION DU COMPTE À REBOURS DANS L'INSTRUCTION
+            let timeLeft = Math.ceil(SCAN_PAUSE_MS / 1000);
+            const instructionEl = document.querySelector('.instruction');
             
-            setTimeout(() => {
-                showResult('✅ Code : ' + decodedText, 'success');
-            }, 500);
-            
+            // Affichage initial du décompte
+            instructionEl.innerHTML = `⏳ Attente de sécurité : <strong>${timeLeft}s</strong>`;
+            instructionEl.style.color = "#f59e0b"; // Orange
+        
+            const countdown = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) {
+                    instructionEl.innerHTML = `⏳ Attente de sécurité : <strong>${timeLeft}s</strong>`;
+                } else {
+                    clearInterval(countdown);
+                }
+            }, 1000);
+        
+            // 6. RÉINITIALISATION APRÈS LA PAUSE
             setTimeout(() => {
                 isProcessing = false;
-                lastScannedCode = '';
+                lastScannedCode = ''; // Permet de scanner à nouveau la même personne si besoin après 5s
                 
+                // Nettoyage visuel
+                instructionEl.innerHTML = "✅ Prêt pour le scan suivant";
+                instructionEl.style.color = "#10b981"; // Vert
+                document.getElementById('result').style.display = 'none';
+        
                 if (scanner && isScanning) {
-                    try {
-                        scanner.resume();
-                    } catch (e) {
-                        console.warn('⚠️ Impossible de reprendre');
-                    }
+                    try { 
+                        scanner.resume(); 
+                        // Retour au message d'origine après 1.5s de disponibilité
+                        setTimeout(() => {
+                            if (!isProcessing) { // On vérifie qu'un nouveau scan n'a pas démarré
+                                instructionEl.textContent = "Positionnez le QR code devant la caméra";
+                                instructionEl.style.color = "#9ca3af";
+                            }
+                        }, 1500);
+                    } catch (e) { console.warn(e); }
                 }
-                
-                setTimeout(() => {
-                    document.getElementById('result').style.display = 'none';
-                }, 1000);
-                
-            }, 2000);
+            }, SCAN_PAUSE_MS);
         }
         
         function onScanFailure(error) {
